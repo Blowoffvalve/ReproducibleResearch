@@ -1,0 +1,125 @@
+##Loading and preprocessing the data
+###Load the data
+```{r readData}
+        activity<- read.csv('C:/Users/opeoluwa.osunkoya/Documents/data/repdata-data-activity/activity.csv')
+```
+
+###Convert the date variable to the date class
+```{r PreProcess}
+        class(activity$date)
+        activity$date<- as.Date(activity$date)
+        class(activity$date)
+```
+##What is the mean total number of steps taken per day?
+###Calculate the total number of steps taken each day and plot an histogram
+```{r}
+        hist(totalSteps<- tapply(activity$steps, activity$date, FUN= sum, na.rm=TRUE))
+```
+### Calculate and report the mean and median total number of steps taken per day i.e.meanTNSTD and medianTNSTD
+#### Mean
+```{r}
+        meanTNSTD <- tapply(activity$steps, activity$date, FUN= mean, na.rm=TRUE)
+        print(as.table(meanTNSTD))
+```
+#### Median
+```{r}
+        medianTNSTD<- tapply(activity$steps, activity$date, FUN= median, na.rm=TRUE)
+        print(as.table(medianTNSTD))
+```
+##What is the average daily activity pattern using 5 minute plots
+-Time series plot 
+```{r}
+plot(type= "l",tapply(activity$steps, activity$interval, mean, na.rm=TRUE))
+```
+-To Find which 5-minute interval contains the maximum number of steps
+```{r}
+        activitymean<- tapply(activity$steps, activity$interval, mean, na.rm=TRUE)
+        activitymean[activitymean==max(activitymean)]
+```
+##Inputting missing values
+1. Total number of missing values in the dataset
+```{r}
+        table(is.na(activity))
+```
+2. Fill in the missing values
+        -I'll use the mean for that 5 minute interval
+
+3. Create a new data set equal to the original dataset but with the missing data filled in
+        - First create a function to fill in the missing value
+```{r ReplaceNAFunction }
+                replaceNA<- function(IncompleteDataSet, DataSetWithAverages)
+        {
+                i<- dim(IncompleteDataSet)[1]
+                for(a in 1:i)
+                {
+                        if(is.na(IncompleteDataSet$steps[i]))
+                        {
+                                IncompleteDataSet$steps[i]<- DataSetWithAverages[DataSetWithAverages= IncompleteDataSet$interval[i]]
+                        }
+                        a<-a+1
+                }
+                return(IncompleteDataSet)
+        }
+```
+        -Then apply the function to the dataset
+```{r FillInEmptyDataset}
+        completeDataset<- replaceNA(activity, activitymean)
+```
+4. Compare the mean and median of the complete DataSet to that of the incomplete data set
+        -Create the histogram
+```{r}
+        completeDataSetHistData<- tapply(completeDataset$steps, completeDataset$date, sum, na.rm=TRUE)
+        hist(completeDataSetHistData)
+```
+        -The New Mean
+```{r}
+        meanCompleteDataSet <- tapply(completeDataset$steps, completeDataset$date, FUN= mean, na.rm=TRUE)
+```
+                -To compare with the existing mean, use the summary function. You'll find that they're the same.
+```{r}
+        summary(meanCompleteDataSet)
+        summary(meanTNSTD)
+```
+                
+        -The New Median. You'll find that they're the same.
+```{r}
+        medianCompleteDataSet<- tapply(completeDataset$steps, completeDataset$date, FUN= median, na.rm=TRUE)
+```
+                - To compare with the existing median
+```{r}
+        summary(medianCompleteDataSet)
+        summary(medianTNSTD)
+```
+##Are there differences in activity patterns between weekdays and weekends?
+1. Create a new function to denote whether the day is a weekday or a weekend in a new variable
+```{r}
+        CheckIfWeekend<- function(Dataset)
+{
+        Dataset$weekdayStat<- as.character(weekdays(Dataset$date))
+        Dataset$weekdayStat[Dataset$weekdayStat=="Saturday"]<- "Weekend"
+        Dataset$weekdayStat[Dataset$weekdayStat=="Sunday"]<- "Weekend"
+        Dataset$weekdayStat[Dataset$weekdayStat!="Weekend"]<- "Weekday"
+        return(Dataset)
+}
+```
+        -Call the function
+```{r}
+completeDataset<- CheckIfWeekend(completeDataset)
+```
+2. Make a panel plot across all weekdays or weekend days
+- Create a set for the weekdays
+```{r}
+        weekdaySet<- subset(completeDataset, subset= (completeDataset$weekdayStat=="Weekday"))
+```
+- Create a set for the weekends
+```{r}
+        weekendSet<- subset(completeDataset, subset= (completeDataset$weekdayStat=="Weekend"))
+```       
+-Plot for the weekdays
+```{r}
+        par(mfcol=c(2,1))
+        WeekdayHistData<- tapply(weekdaySet$steps, weekdaySet$interval, sum, na.rm=TRUE)
+        WeekendHistData<- tapply(weekendSet$steps, weekendSet$interval, sum, na.rm=TRUE)        
+        plot(WeekdayHistData, type='l')
+        plot(WeekendHistData, type='l')
+```
